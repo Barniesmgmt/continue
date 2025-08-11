@@ -641,6 +641,46 @@ export const sessionSlice = createSlice({
                 lastMessage.content += messageContent;
               }
             }
+          }
+
+          // Handle reasoning field from OpenAI o-series models
+          if (message.role === "assistant" && message.reasoning !== undefined) {
+            if (!lastItem.reasoning) {
+              // First reasoning chunk - create new reasoning object
+              lastItem.reasoning = {
+                text: message.reasoning,
+                startAt: Date.now(),
+                active: messageContent ? false : true,
+                endAt: messageContent ? Date.now() : undefined,
+              };
+            } else if (lastItem.reasoning.active) {
+              // Continue adding to existing active reasoning
+              lastItem.reasoning.text += message.reasoning;
+            }
+            
+            // If we have both reasoning and content in the same message, end the reasoning
+            if (messageContent && lastItem.reasoning.active) {
+              lastItem.reasoning.active = false;
+              lastItem.reasoning.endAt = Date.now();
+            }
+          } else if (
+            message.role === "assistant" &&
+            messageContent &&
+            lastItem.reasoning?.active &&
+            message.reasoning === undefined
+          ) {
+            // If we receive content with active reasoning but no reasoning field, 
+            // this means reasoning phase is ending and content should go to message
+            lastItem.reasoning.active = false;
+            lastItem.reasoning.endAt = Date.now();
+            
+            // Add content to message instead of reasoning
+            if (
+              lastMessage.content.length > 0 ||
+              messageContent.trim().length > 0
+            ) {
+              lastMessage.content += messageContent;
+            }
           } else if (message.role === "thinking" && message.signature) {
             if (lastMessage.role === "thinking") {
               lastMessage.signature = message.signature;

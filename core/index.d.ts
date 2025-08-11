@@ -397,6 +397,7 @@ export interface AssistantChatMessage {
   role: "assistant";
   content: MessageContent;
   toolCalls?: ToolCallDelta[];
+  reasoning?: string;
   usage?: Usage;
 }
 
